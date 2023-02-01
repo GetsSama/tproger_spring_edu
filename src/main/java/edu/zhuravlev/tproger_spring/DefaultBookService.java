@@ -10,6 +10,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefaultBookService implements BookService{
     private final BookRepository bookRepository;
+    private final BookToEntityMapper bookToEntityMapper;
 
     @Override
     public Book getBookById(Long id) {
@@ -17,10 +18,7 @@ public class DefaultBookService implements BookService{
                                             .findById(id)
                                             .orElseThrow(()->new RuntimeException("Book not found: id = " + id));
 
-        return new Book(bookEntity.getId(),
-                        bookEntity.getAuthor(),
-                        bookEntity.getTitle(),
-                        bookEntity.getPrice());
+        return bookToEntityMapper.bookEntityToBook(bookEntity);
     }
 
     @Override
@@ -28,18 +26,24 @@ public class DefaultBookService implements BookService{
         Iterable<BookEntity> bookEntities = bookRepository.findAll();
         List<Book> books = new ArrayList<>();
 
-        for (var entities : bookEntities) {
-            books.add(new Book(entities.getId(),
-                    entities.getAuthor(),
-                    entities.getTitle(),
-                    entities.getPrice()));
-        }
+        for (var entities : bookEntities)
+            books.add(bookToEntityMapper.bookEntityToBook(entities));
+
         return books;
     }
 
     @Override
     public void addBook(Book book) {
-        BookEntity bookEntity = new BookEntity(null, book.getAuthor(), book.getTitle(), book.getPrice());
+        BookEntity bookEntity = bookToEntityMapper.bookToBookEntity(book);
         bookRepository.save(bookEntity);
+    }
+
+    @Override
+    public List<Book> findByAuthor(String author) {
+        Iterable<BookEntity> iterable = bookRepository.findAllByAuthorContaining(author);
+        List<Book> books = new ArrayList<>();
+        for(var bookEntity : iterable)
+            books.add(bookToEntityMapper.bookEntityToBook(bookEntity));
+        return books;
     }
 }
